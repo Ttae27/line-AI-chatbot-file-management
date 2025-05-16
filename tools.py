@@ -29,7 +29,7 @@ def upload_file(query, session_id):
     upload_tools = [download_file]
     llm_with_upload_tools = llm.bind_tools(upload_tools)
 
-    file_data = get_files_data()
+    file_data = get_files_data(session_id)
     messages = [HumanMessage(query + ' this is a list of metadata of file' + str(file_data))]
     # print(messages)
     ai_message =  llm_with_upload_tools.invoke(messages)
@@ -46,18 +46,19 @@ def upload_file(query, session_id):
         # print(result)
 
 @tool
-def delete_file(query, session_id):
+def delete_file(query, session_id, user_id):
     """
         ลบไฟล์ใน google drive 
 
         Args:
             query: คำสั่งจากผู้ใช้ เช่น "ลบไฟล์ล่าสุด"
-            session_id: session_id
+            session_id: session id
+            user_id: user id
     """
     delete_tools = [delete_file_google]
     llm_with_delete_tools = llm.bind_tools(delete_tools)
 
-    file_data = show_files()
+    file_data = show_files(session_id, user_id)
     messages = [HumanMessage(query + ' this is a list of metadata of file' + str(file_data))]
     # print(messages)
     ai_message =  llm_with_delete_tools.invoke(messages)
@@ -77,7 +78,7 @@ def delete_file(query, session_id):
             
             tool_message.append(tool_msg)
             # messages.append(tool_msg)
-            print('tool msg --------> ', tool_msg.content)
+            # print('tool msg --------> ', tool_msg.content)
         return tool_message
 
 @tool
@@ -92,7 +93,7 @@ def sharing_file(query, session_id):
     sharing_tools = [sharing_file_google]
     llm_with_sharing_tools = llm.bind_tools(sharing_tools)
 
-    file_data = show_files()
+    file_data = show_files(session_id)
     messages = [HumanMessage(query + ' this is a list of metadata of file' + str(file_data))]
     ai_message =  llm_with_sharing_tools.invoke(messages)
     tool_message = []
@@ -108,10 +109,10 @@ def sharing_file(query, session_id):
             
             tool_message.append(tool_msg)
             # messages.append(tool_msg)
-            print('tool msg --------> ', tool_msg.content)
+            # print('tool msg --------> ', tool_msg.content)
         return tool_message
 
-def call_langchain_with_history(query, session_id):
+def call_langchain_with_history(query, session_id, user_id):
     main_tools = [show_files_tool, delete_file, upload_file, sharing_file]
     llm_with_tools = llm.bind_tools(main_tools)
 
@@ -132,10 +133,10 @@ def call_langchain_with_history(query, session_id):
             continue
 
     system_msg = SystemMessage(content=(
-            "You are a helpful assistant. You will see past messages labeled as [history]. "
+            "Your name is Casper (แคสเปอร์). You are a helpful assistant. You will see past messages labeled as [history]. "
             "Focus only on the message labeled [current] to determine your response. "
             "Do NOT perform tool calls unless the [current] message clearly requests an action like upload, delete, or list files." 
-            "If tool calls have parameter session_id use this: " + session_id
+            f"If tool calls have parameter session_id use this: {session_id} and if tool calls have parameter user_id use this: {user_id} "
         ))
 
     user_msg = HumanMessage(content="[current] by user: " + query)

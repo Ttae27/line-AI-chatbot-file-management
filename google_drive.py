@@ -22,7 +22,7 @@ def to_bytes(path):
         byte_array = file.read() 
     return byte_array 
 
-def upload_file_drive(file: bytearray, file_name: str, about: str):
+def upload_file_drive(file: bytearray, file_name: str, about: str, group_id: str, user_id: str):
     """Upload file 
 
     Args:
@@ -33,7 +33,11 @@ def upload_file_drive(file: bytearray, file_name: str, about: str):
     try:
         file_metadata = {
             "name": file_name,
-            "description": about
+            "description": about,
+            "properties": {
+                "group_id": group_id,
+                "user_id": user_id
+            }
         }
         mimetype = 'application/' + file_name.split('.')[1]
         # print(mimetype)
@@ -76,19 +80,24 @@ def sharing_file_google(file_id: str):
     return response_share_link ['webViewLink']
 
 @tool
-def show_files_tool(parent_folder_id=None):
+def show_files_tool(session_id, parent_folder_id=None):
     """
         โชว์ไฟล์ใน google drive
-
+        Args:
+            session_id: session_id of file
+            
         return id name mimeType createdTime and description
     """
     results = service.files().list(
         # q=f"'{parent_folder_id}' in parents and trashed=false" if parent_folder_id else None,
         q=None,
         pageSize=1000,
-        fields="nextPageToken, files(id, name, mimeType, createdTime, description)"
+        fields="nextPageToken, files(id, name, mimeType, createdTime, description, properties)"
     ).execute()
-    items = results.get('files', [])
+    items = []
+    for item in results.get('files', []):
+        if item['properties']['group_id'] == session_id:
+            items.append(item)
 
     return items
 
@@ -104,14 +113,21 @@ def delete_file_google(file_id):
 
     return 'delete successfully'
 
-def show_files(parent_folder_id=None):
+def show_files(group_id, user_id=None):
     results = service.files().list(
-        # q=f"'{parent_folder_id}' in parents and trashed=false" if parent_folder_id else None,
         q=None,
         pageSize=1000,
-        fields="nextPageToken, files(id, name, mimeType, createdTime, description)"
+        fields="nextPageToken, files(id, name, mimeType, createdTime, description, properties)"
     ).execute()
-    items = results.get('files', [])
+    items = []
+    if user_id:
+        for item in results.get('files', []):
+            if item['properties']['group_id'] == group_id and item['properties']['user_id'] == user_id:
+                items.append(item)
+    else:
+        for item in results.get('files', []):
+            if item['properties']['group_id'] == group_id:
+                items.append(item)
 
     return items
 
@@ -119,7 +135,7 @@ def update_file():
     pass
 
 # sharing_file('1HlhOqPjWv5oEx82YZHmNkFaoVWJG5Xkg')
-# a = show_files()
+# a = show_files("Cdb64c7273beeb53116ca68976a25209f")
 # print(a)
 
 # upload_file(to_bytes('received_files/Security Law.docx'), 'Security Law.docx', 'test')
